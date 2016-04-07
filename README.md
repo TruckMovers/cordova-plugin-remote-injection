@@ -35,3 +35,6 @@ Will Apple approve the app if it just wraps a site?  Point 2.12 in their [guidel
 
 I make no promises for your app but our app was approved by Apple and is in the App Store.  We feel we enhanced our site with the app and are not simply bundling it.  We display the website but also provide notifications to our users for important events, badge count updates for alerts, etc.  Our app is also specifically for the customers of our company and not general use so that may have been a factor in their decision although all we can do is speculate.
 
+## Support
+
+Log issues on [github](https://github.com/TruckMovers/cordova-plugin-remote-injection) and we'll get in contact.
