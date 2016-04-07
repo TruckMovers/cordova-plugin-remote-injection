@@ -3,7 +3,7 @@ The remote injection plugin allows a remote site to interact with [cordova](http
 ## Features
 * Injects cordova and installed plugin JS into the webview for any remotely browsed page allowing them the same access to the cordova object and its plugins as a packaged cordova app.
 * Provides a naive dialog prompting the user if they want to retry upon a failed connection.  This could use some work and was the minimal functionality for us to launch.
-* Support iOS and Android.
+* Support for iOS and Android platforms.
 
 ## Installation
 It installs like any other cordova plugin... that isn't in npm.  We'd like to get it there eventually.
