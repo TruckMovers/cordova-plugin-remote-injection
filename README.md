@@ -1,12 +1,12 @@
-The remote injection plugin allows a remote site to interact with cordova's javascript APIs when loaded within your app.  The downside to wrapping a remote site (when compared with packaged HTML) is if the network is down your app is down.  This can be an acceptable trade off if your site has a heavy dependency on the network (i.e. web services).  The advantage is the build, deployment, and previous investment of an existing site doesn't need to change (except when adding native functionality) and can continue to work for browser based users providing a smooth transition to an app providing tighter native integration.
+The remote injection plugin allows a remote site to interact with [cordova](https://cordova.apache.org)'s javascript APIs when loaded within your cordova app.  When compared with a cordova app that packages its HTML the downside to loading a remote site is if the network is down your app is down.  This can be an acceptable trade off if your site has a heavy dependency on the web services.  The advantage to this approach is the build, deployment, and previous investment of an existing site doesn't need to change and can continue to work for browser based users providing a smooth transition to an app which provides tighter native integration.
 
 ## Features
-* Injects cordova and any installed plugin JS into the webview for any remotely browsed page allowing them the same access to the cordova object and its plugins as a packaged cordova app.
+* Injects cordova and installed plugin JS into the webview for any remotely browsed page allowing them the same access to the cordova object and its plugins as a packaged cordova app.
 * Provides a naive dialog prompting the user if they want to retry upon a failed connection.  This could use some work and was the minimal functionality for us to launch.
 * Support iOS and Android.
 
 ## Installation
-It installs like any other cordova plugin... that isn't in npm.  I'd like to get it there eventually.
+It installs like any other cordova plugin... that isn't in npm.  We'd like to get it there eventually.
 
 You'll need to clone this repo and have the plugin locally.  You can then install via the [cordova CLI](https://cordova.apache.org/docs/en/latest/reference/cordova-cli/index.html#cordova-plugin-command) or [plugman](https://cordova.apache.org/docs/en/latest/plugin_ref/plugman.html#adding-a-plugin).
 
@@ -33,5 +33,5 @@ Will Apple approve the app if it just wraps a site?  Point 2.12 in their [guidel
 
 `2.12 Apps that are not very useful, unique, are simply web sites bundled as Apps, or do not provide any lasting entertainment value may be rejected`
 
-I make no promises for your app but our's was approved by Apple and is in the App Store.  We feel we enhanced our site with the app and are not simply bundling it.  We display the website but also provide notifications to our users for important events, badge count updates for alerts, etc.  Our app is also specifically for the customers of our company and not general use so that may have been a factor in their decision as well although all we can do is speculate.
+I make no promises for your app but our app was approved by Apple and is in the App Store.  We feel we enhanced our site with the app and are not simply bundling it.  We display the website but also provide notifications to our users for important events, badge count updates for alerts, etc.  Our app is also specifically for the customers of our company and not general use so that may have been a factor in their decision although all we can do is speculate.
 
