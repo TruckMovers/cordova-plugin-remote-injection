@@ -6,12 +6,8 @@ The remote injection plugin allows a remote site to interact with [cordova](http
 * Support for iOS and Android platforms.
 
 ## Installation
-It installs like any other cordova plugin... that isn't in npm.  We'd like to get it there eventually.
-
-You'll need to clone this repo and have the plugin locally.  You can then install via the [cordova CLI](https://cordova.apache.org/docs/en/latest/reference/cordova-cli/index.html#cordova-plugin-command) or [plugman](https://cordova.apache.org/docs/en/latest/plugin_ref/plugman.html#adding-a-plugin).
-
 ```bash
-cordova plugin add /path/to/cordova-plugin-remote-injection
+cordova plugin add cordova-plugin-remote-injection
 ```
 
 ## Configuration

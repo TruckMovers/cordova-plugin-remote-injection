@@ -1,0 +1,23 @@
+{
+  "name": "cordova-plugin-remote-injection",
+  "version": "0.1.0",
+  "description": "Injects Cordova into a remote site.",
+  "cordova": {
+    "id": "cordova-plugin-remote-injection",
+    "platforms": [
+      "android",
+      "ios"
+    ]
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/TruckMovers/cordova-plugin-remote-injection"
+  },
+  "keywords": [
+    "ecosystem:cordova",
+    "cordova-android",
+    "cordova-ios"
+  ],
+  "author": "Brad Reynolds",
+  "license": "Apache-2.0"
+}
