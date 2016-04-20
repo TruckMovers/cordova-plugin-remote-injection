@@ -34,6 +34,23 @@
 @end
 
 @implementation CDVRemoteInjectionPlugin
+- (UIWebView *) findWebView
+{
+    UIWebView *webView;
+    if ([self respondsToSelector:@selector(webViewEngine)]) {
+        // cordova-ios 4.0
+        // TODO test that engineWebView is instance of UIWebView
+        SEL selector = NSSelectorFromString(@"webViewEngine");
+        SEL selectorWebView = NSSelectorFromString(@"engineWebView");
+        
+        webView = (UIWebView *)[[self performSelector:selector] performSelector:selectorWebView];
+    } else {
+        // < cordova-ios 4.0
+        webView = (UIWebView *)[self webView];
+    }
+    
+    return webView;
+}
 - (void) pluginInitialize
 {
     [super pluginInitialize];
@@ -50,10 +67,12 @@
                                                  name:kCDVRemoteInjectionWebViewDidFailLoadWithError
                                                object:nil];
     
+    UIWebView *webView = [self findWebView];
+
     // Wrap the current delegate with our own so we can hook into web view events.
     notificationDelegate = [[CDVRemoteInjectionWebViewNotificationDelegate alloc] init];
-    notificationDelegate.wrappedDelegate = self.webView.delegate;
-    [self.webView setDelegate:notificationDelegate];
+    notificationDelegate.wrappedDelegate = [webView delegate];
+    [webView setDelegate:notificationDelegate];
     
     // Read configuration to read in files to inject first.
     NSString *setting  = @"CRIInjectFirstFiles";
@@ -158,7 +177,7 @@
 {
     if(buttonIndex == 1)
     {
-        [self.webView reload];
+        [[self findWebView] reload];
     }
 }
 
