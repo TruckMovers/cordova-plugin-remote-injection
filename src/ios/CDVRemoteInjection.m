@@ -4,6 +4,7 @@
 
 #import "CDVRemoteInjection.h"
 #import <Foundation/Foundation.h>
+#import <Cordova/CDVAvailability.h>
 
 @implementation CDVRemoteInjectionWebViewNotificationDelegate
 
@@ -34,6 +35,21 @@
 @end
 
 @implementation CDVRemoteInjectionPlugin
+- (UIWebView *) findWebView
+{
+    UIWebView *webView;
+#ifdef __CORDOVA_4_0_0
+    UIView *view = [[self webViewEngine] engineWebView];
+    
+    if ([view isKindOfClass:[UIWebView class]]) {
+        webView = (UIWebView *) view;
+    }
+#else
+    webView = [self webView];
+#endif
+    
+    return webView;
+}
 - (void) pluginInitialize
 {
     [super pluginInitialize];
@@ -43,17 +59,19 @@
                                              selector:@selector(webViewDidFinishLoad:)
                                                  name:kCDVRemoteInjectionWebViewDidFinishLoad
                                                object:nil];
-
+    
     // Hook to respond to page load failures.
     [[NSNotificationCenter defaultCenter] addObserver:self
                                              selector:@selector(didWebViewFailLoadWithError:)
                                                  name:kCDVRemoteInjectionWebViewDidFailLoadWithError
                                                object:nil];
     
+    UIWebView *webView = [self findWebView];
+    
     // Wrap the current delegate with our own so we can hook into web view events.
     notificationDelegate = [[CDVRemoteInjectionWebViewNotificationDelegate alloc] init];
-    notificationDelegate.wrappedDelegate = self.webView.delegate;
-    [self.webView setDelegate:notificationDelegate];
+    notificationDelegate.wrappedDelegate = [webView delegate];
+    [webView setDelegate:notificationDelegate];
     
     // Read configuration to read in files to inject first.
     NSString *setting  = @"CRIInjectFirstFiles";
@@ -105,7 +123,7 @@
         
         NSURL *jsURL = [NSURL fileURLWithPath:jsFilePath];
         NSString *js = [NSString stringWithContentsOfFile:jsURL.path encoding:NSUTF8StringEncoding error:nil];
-    
+        
         NSLog(@"Injecting JS file into remote site: %@", jsURL.path);
         [theWebView stringByEvaluatingJavaScriptFromString:js];
     }
@@ -158,7 +176,7 @@
 {
     if(buttonIndex == 1)
     {
-        [self.webView reload];
+        [[self findWebView] reload];
     }
 }
 
