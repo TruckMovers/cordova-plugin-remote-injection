@@ -1,8 +1,8 @@
-The remote injection plugin allows a remote site to interact with [cordova](https://cordova.apache.org)'s javascript APIs when loaded within your cordova app.  When compared with a cordova app that packages its HTML the downside to loading a remote site is if the network is down your app is down.  This can be an acceptable trade off if your site has a heavy dependency on the web services.  The advantage to this approach is the build, deployment, and previous investment of an existing site doesn't need to change and can continue to work for browser based users providing a smooth transition to an app which provides tighter native integration.
+The remote injection plugin allows a remote site to interact with [cordova](https://cordova.apache.org)'s javascript APIs when loaded within your cordova app.  When compared with a cordova app that packages its HTML the downside to loading a remote site is if the network is down your app is down.  This can be an acceptable trade off if your site has a heavy dependency on web services.  The advantage to this approach is the build, deployment, and previous investment of an existing site doesn't need to change and can continue to work for browser based users providing a smooth transition to an app which provides tighter native integration.
 
 ## Features
 * Injects cordova and installed plugin JS into the webview for any remotely browsed page allowing them the same access to the cordova object and its plugins as a packaged cordova app.
-* Provides a naive dialog prompting the user if they want to retry upon a failed connection.  This could use some work and was the minimal functionality for us to launch.
+* After a developer defined interval will prompt the user if the loading of the main site is taking too long.  The user's options are to wait or retry.  If the user waits the prompt will be displayed again after the developer defined interval.  If the site loads while the dialog is displayed the dialog is dismissed.
 * Support for iOS and Android platforms.
 
 ## Installation
@@ -18,11 +18,28 @@ Configuration is done via preferences in your config.xml.
 <preference name="CRIInjectFirstFiles" value="www/js/init.js" />
 ```
 
-Type: String
+<dl>
+<dt>Type</dt><dd>String</dd>
+<dt>Default</dt><dd>none</dd>
+</dl>
 
 List of paths to JS files within the project to inject before injecting cordova into the remote site.  To inject multiple separate the files with a ",".
 
 <preference name="CRIInjectFirstFiles" value="www/js/file1.js,www/js/file2.js" />
+
+### CRIPageLoadPromptInterval
+```xml
+<preference name="CRIPageLoadPromptInterval" value="5" />
+```
+
+<dl>
+<dt>Type</dt>
+<dd>int</dd>
+<dt>Default</dt><dd>10</dd>
+</dl>
+
+If the site hasn't loaded after this interval the user will be provided a choice to continue waiting or to retry loading the site.  This is turned on by default.  If not wanting the prompt the user set the value to 0.
+
 ## FAQ
 
 Will Apple approve the app if it just wraps a site?  Point 2.12 in their [guidelines](https://developer.apple.com/app-store/review/guidelines/#functionality) states:
