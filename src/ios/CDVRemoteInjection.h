@@ -4,6 +4,7 @@
 
 #import <Cordova/CDVPlugin.h>
 
+#define kCDVRemoteInjectionWebViewDidStartLoad @"CDVRemoveInjectionWebViewDidStartLoad"
 #define kCDVRemoteInjectionWebViewDidFinishLoad @"CDVRemoveInjectionWebViewDidFinishLoad"
 #define kCDVRemoteInjectionWebViewDidFailLoadWithError @"CDVRemoteInjectionWebViewDidFailLoadWithError"
 

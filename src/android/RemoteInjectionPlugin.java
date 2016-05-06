@@ -8,6 +8,9 @@ import android.util.Base64;
 
 import org.apache.cordova.CordovaPlugin;
 import org.apache.cordova.CordovaWebViewEngine;
+import org.apache.cordova.LOG;
+import org.json.JSONException;
+import org.json.JSONObject;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -17,30 +20,83 @@ import java.io.InputStreamReader;
 import java.net.MalformedURLException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Timer;
+import java.util.TimerTask;
 import java.util.regex.Pattern;
 
 public class RemoteInjectionPlugin extends CordovaPlugin {
+    private static String TAG = "RemoteInjectionPlugin";
     private static Pattern REMOTE_URL_REGEX = Pattern.compile("^http(s)?://.*");
 
     // List of files to inject before injecting Cordova.
     private final ArrayList<String> preInjectionFileNames = new ArrayList<String>();
+    private int promptInterval;  // Delay before prompting user to retry in seconds
+
+    private RequestLifecycle lifecycle;
 
     protected void pluginInitialize() {
         String pref = webView.getPreferences().getString("CRIInjectFirstFiles", "");
         for (String path: pref.split(",")) {
             preInjectionFileNames.add(path.trim());
         }
+        promptInterval = webView.getPreferences().getInteger("CRIPageLoadPromptInterval", 10);
+
+        final Activity activity = super.cordova.getActivity();
+        final CordovaWebViewEngine engine = super.webView.getEngine();
+        lifecycle = new RequestLifecycle(activity, engine, promptInterval);
+    }
+
+    private void onMessageTypeFailure(String messageId, Object data) {
+        LOG.e(TAG, messageId + " received a data instance that is not an expected type:" + data.getClass().getName());
+    }
+
+    @Override
+    public void onReset() {
+        super.onReset();
+
+        lifecycle.requestStopped();
     }
 
     @Override
     public Object onMessage(String id, Object data) {
         if (id.equals("onReceivedError")) {
-            if (isRemote(data)) {
-                showRetryDialog();
+            // Data is a JSONObject instance with the following keys:
+            // * errorCode
+            // * description
+            // * url
+
+            if (data instanceof JSONObject) {
+                JSONObject json = (JSONObject) data;
+
+                try {
+                    if (isRemote(json.getString("url"))) {
+                        lifecycle.requestStopped();
+                    }
+                } catch (JSONException e) {
+                    LOG.e(TAG, "Unexpected JSON in onReceiveError", e);
+                }
+            } else {
+                onMessageTypeFailure(id, data);
             }
         } else if (id.equals("onPageFinished")) {
-            if (isRemote(data)) {
-                injectCordova();
+            if (data instanceof String) {
+                String url = (String) data;
+                if (isRemote(url)) {
+                    injectCordova();
+                    lifecycle.requestStopped();
+                }
+            } else {
+                onMessageTypeFailure(id, data);
+            }
+        } else if (id.equals("onPageStarted")) {
+            if (data instanceof String) {
+                String url = (String) data;
+
+                if (isRemote(url)) {
+                    lifecycle.requestStarted(url);
+                }
+            } else {
+                onMessageTypeFailure(id, data);
             }
         }
 
@@ -51,37 +107,8 @@ public class RemoteInjectionPlugin extends CordovaPlugin {
      * @param url
      * @return true if the URL over HTTP or HTTPS
      */
-    private boolean isRemote(Object url) {
-        if (url instanceof String) {
-            return REMOTE_URL_REGEX.matcher((String) url).matches();
-        }
-        return false;
-    }
-
-    private void showRetryDialog() {
-        final Activity activity = super.cordova.getActivity();
-        final CordovaWebViewEngine engine = super.webView.getEngine();
-
-        cordova.getActivity().runOnUiThread(new Runnable() {
-            public void run() {
-                AlertDialog.Builder builder = new AlertDialog.Builder(activity);
-                builder.setMessage("There was an issue contacting the server.")
-                        .setPositiveButton("Try again?", new DialogInterface.OnClickListener() {
-                            public void onClick(DialogInterface dialog, int id) {
-                                // Obviously only works for GETs but good enough.
-                                engine.loadUrl(engine.getUrl(), false);
-                            }
-                        })
-                        .setNegativeButton("Exit", new DialogInterface.OnClickListener() {
-                            public void onClick(DialogInterface dialog, int id) {
-                                // Exit the app.
-                                activity.finish();
-                            }
-                        });
-                // Show the alert.
-                builder.create().show();
-            }
-        });
+    private boolean isRemote(String url) {
+        return REMOTE_URL_REGEX.matcher((String) url).matches();
     }
 
     private void injectCordova() {
@@ -174,5 +201,117 @@ public class RemoteInjectionPlugin extends CordovaPlugin {
         }
 
         return jsPaths;
+    }
+
+    private static class RequestLifecycle {
+        private final Activity activity;
+        private final CordovaWebViewEngine engine;
+        private UserPromptTask task;
+        private final int promptInterval;
+
+        RequestLifecycle(Activity activity, CordovaWebViewEngine engine, int promptInterval) {
+            this.activity = activity;
+            this.engine = engine;
+            this.promptInterval = promptInterval;
+        }
+
+        boolean isLoading() {
+            return task != null;
+        }
+
+        void requestStopped() {
+            stopTask();
+        }
+
+        void requestStarted(final String url) {
+            startTask(url);
+        }
+
+        private synchronized void stopTask() {
+            if (task != null) {
+                task.cancel();
+                task = null;
+            }
+        }
+
+        private synchronized void startTask(final String url) {
+            if (task != null) {
+                task.cancel();
+            }
+
+            task = new UserPromptTask(this, activity, engine, url);
+            new Timer().schedule(task, promptInterval * 1000);
+        }
+    }
+
+    /**
+     * Prompt the user asking if they want to wait on the current request or retry.
+     */
+    static class UserPromptTask extends TimerTask {
+        private final RequestLifecycle lifecycle;
+        private final Activity activity;
+        private final CordovaWebViewEngine engine;
+        final String url;
+
+        AlertDialog alertDialog;
+
+        UserPromptTask(RequestLifecycle lifecycle, Activity activity, CordovaWebViewEngine engine, String url) {
+            this.lifecycle = lifecycle;
+            this.activity = activity;
+            this.engine = engine;
+            this.url = url;
+        }
+
+        @Override
+        public boolean cancel() {
+            boolean result = super.cancel();
+            cleanup();
+
+            return result;
+        }
+
+        private void cleanup() {
+            if (alertDialog != null) {
+                alertDialog.dismiss();
+                alertDialog = null;
+            }
+        }
+
+        @Override
+        public void run() {
+            if (lifecycle.isLoading()) {
+                // Prompts the user giving them the choice to wait on the current request or retry.
+                lifecycle.activity.runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        AlertDialog.Builder builder = new AlertDialog.Builder(activity);
+                        builder.setMessage("The server is taking longer than expected to respond.")
+                                .setOnDismissListener(new DialogInterface.OnDismissListener() {
+                                    @Override
+                                    public void onDismiss(DialogInterface dialog) {
+                                        UserPromptTask.this.cleanup();
+                                    }
+                                })
+                                .setPositiveButton("Retry", new DialogInterface.OnClickListener() {
+                                    @Override
+                                    public void onClick(DialogInterface dialog, int id) {
+                                        // Obviously only works for GETs but good enough.
+                                        engine.loadUrl(engine.getUrl(), false);
+                                    }
+                                })
+                                .setNegativeButton("Wait", new DialogInterface.OnClickListener() {
+                                    @Override
+                                    public void onClick(DialogInterface dialog, int id) {
+                                        lifecycle.startTask(url);
+                                    }
+                                });
+                        AlertDialog dialog = UserPromptTask.this.alertDialog = builder.create();
+                        dialog.show();
+                    }
+                });
+            } else {
+                lifecycle.stopTask();
+            }
+        }
     }
 }
