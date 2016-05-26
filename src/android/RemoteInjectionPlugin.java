@@ -5,6 +5,7 @@ import android.app.AlertDialog;
 import android.content.DialogInterface;
 import android.content.res.AssetManager;
 import android.util.Base64;
+import android.webkit.ValueCallback;
 
 import org.apache.cordova.CordovaPlugin;
 import org.apache.cordova.CordovaWebViewEngine;
@@ -28,39 +29,35 @@ import org.xwalk.core.XWalkView;
 import org.xwalk.core.JavascriptInterface;
 
 public class RemoteInjectionPlugin extends CordovaPlugin {
-    // List of files to inject before injecting Cordova.
-    private final ArrayList<String> preInjectionFileNames = new ArrayList<String>();
+    public static final String TAG = "RemoteInjectionPlugin";
+
+    // Javascipt to inject before injecting Cordova.
     private String cachedCordovaData;
 
-    public static abstract class InjectionFunctor {
-        @JavascriptInterface
-        public abstract String apply();
-    }
-
     protected void pluginInitialize() {
+        ArrayList<String> preInjectionFileNames = new ArrayList<String>();
         String pref = webView.getPreferences().getString("CRIInjectFirstFiles", "");
         for (String path: pref.split(",")) {
             preInjectionFileNames.add(path.trim());
         }
-
-        cachedCordovaData = injectCordova();
+        this.cachedCordovaData = injectCordova(preInjectionFileNames);
     }
 
     @Override
     public Object onMessage(String id, Object data) {
         if (id.equals("onPageStarted")) {
-            // bind Injection function
-            ((XWalkView) webView.getView()).addJavascriptInterface(new InjectionFunctor() {
-                @JavascriptInterface
-                public String apply() {
-                    return RemoteInjectionPlugin.this.cachedCordovaData;
+            // add some cordova apis to the webview
+            ((XWalkView) webView.getView()).evaluateJavascript(cachedCordovaData, new ValueCallback<String>() {
+                @Override
+                public void onReceiveValue(String value) {
+                    LOG.i(TAG, "Value from injecting cordova: " + value);
                 }
-            }, "cordova_injector");
+            });
         }
         return null;
     }
 
-    private String injectCordova() {
+    private String injectCordova(ArrayList<String> preInjectionFileNames) {
         List<String> jsPaths = new ArrayList<String>();
         for (String path: preInjectionFileNames) {
             jsPaths.add(path);
