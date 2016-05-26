@@ -1,6 +1,6 @@
 {
   "name": "cordova-plugin-remote-injection",
-  "version": "0.3.0",
+  "version": "0.5.0",
   "description": "Injects Cordova into a remote site.",
   "cordova": {
     "id": "cordova-plugin-remote-injection",
