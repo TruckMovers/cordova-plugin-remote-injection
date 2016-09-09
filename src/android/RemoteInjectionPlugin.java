@@ -28,6 +28,7 @@ public class RemoteInjectionPlugin extends CordovaPlugin {
     private static String TAG = "RemoteInjectionPlugin";
     private static Pattern REMOTE_URL_REGEX = Pattern.compile("^http(s)?://.*");
 
+
     // List of files to inject before injecting Cordova.
     private final ArrayList<String> preInjectionFileNames = new ArrayList<String>();
     private int promptInterval;  // Delay before prompting user to retry in seconds
@@ -239,8 +240,10 @@ public class RemoteInjectionPlugin extends CordovaPlugin {
                 task.cancel();
             }
 
-            task = new UserPromptTask(this, activity, engine, url);
-            new Timer().schedule(task, promptInterval * 1000);
+            if (promptInterval > 0 ) {
+                task = new UserPromptTask(this, activity, engine, url);
+                new Timer().schedule(task, promptInterval * 1000);
+            }
         }
     }
 
