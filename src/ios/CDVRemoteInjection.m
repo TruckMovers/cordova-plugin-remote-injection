@@ -79,6 +79,13 @@
 {
     [super pluginInitialize];
     
+    UIWebView *webView = [self findWebView];
+    
+    if (!webView) {
+        NSLog(@"Unable to find UIWebView");
+        return;
+    }
+    
     // Hook to inject cordova into the page.
     [[NSNotificationCenter defaultCenter] addObserver:self
                                              selector:@selector(webViewDidStartLoad:)
@@ -96,8 +103,6 @@
                                              selector:@selector(didWebViewFailLoadWithError:)
                                                  name:kCDVRemoteInjectionWebViewDidFailLoadWithError
                                                object:nil];
-    
-    UIWebView *webView = [self findWebView];
     
     // Wrap the current delegate with our own so we can hook into web view events.
     notificationDelegate = [[CDVRemoteInjectionWebViewNotificationDelegate alloc] init];
