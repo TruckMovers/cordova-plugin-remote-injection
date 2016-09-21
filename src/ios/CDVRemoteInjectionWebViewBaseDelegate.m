@@ -1,3 +1,5 @@
+#import <Foundation/Foundation.h>
+
 #import "CDVRemoteInjection.h"
 #import "CDVRemoteInjectionWebViewBaseDelegate.h"
 
@@ -18,6 +20,28 @@
     } else {
         return nil;
     }
+}
+
+/*
+ Builds a string of JS to inject into the web view.
+ */
+- (NSString *) buildInjectionJS;
+{
+    NSArray *jsPaths = [self jsPathsToInject];
+    
+    NSString *path;
+    NSMutableString *concatenatedJS = [[NSMutableString alloc] init];
+    
+    for (path in jsPaths) {
+        NSString *jsFilePath = [[NSBundle mainBundle] pathForResource:path ofType:nil];
+        
+        NSURL *jsURL = [NSURL fileURLWithPath:jsFilePath];
+        NSString *js = [NSString stringWithContentsOfFile:jsURL.path encoding:NSUTF8StringEncoding error:nil];
+        NSLog(@"Concatenating JS found in path: '%@'", jsURL.path);
+        
+        [concatenatedJS appendString:js];
+    }
+    return concatenatedJS;
 }
 
 /*
@@ -54,4 +78,35 @@
     return jsPaths;
 }
 
+/*
+ Returns YES if the URL scheme is supported for JS injection.
+ */
+- (BOOL) isSupportedURLScheme:(NSString *) scheme
+{
+    if ([scheme isEqualToString:@"http"] || [scheme isEqualToString:@"https"]) {
+        return YES;
+    }
+    
+    NSLog(@"Unsupported scheme for cordova injection: '%@'.  Skipping.", scheme);
+    return NO;
+}
+
+@end
+
+@implementation WrappedDelegateProxy
+- (BOOL)respondsToSelector:(SEL)aSelector
+{
+    if ([super respondsToSelector:aSelector] || [self.wrappedDelegate respondsToSelector:aSelector]) {
+        return YES;
+    }
+    return NO;
+}
+
+- (void)forwardInvocation:(NSInvocation *)anInvocation
+{
+    if ([self.wrappedDelegate respondsToSelector:[anInvocation selector]])
+        [anInvocation invokeWithTarget:self.wrappedDelegate];
+    else
+        [super forwardInvocation:anInvocation];
+}
 @end

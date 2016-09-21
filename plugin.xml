@@ -15,10 +15,12 @@
     </config-file>
     <header-file src="src/ios/CDVRemoteInjection.h" />
     <source-file src="src/ios/CDVRemoteInjection.m" />
-    <header-file src="src/ios/CDVRemoteInjectionUIWebViewDelegate.h" />
-    <source-file src="src/ios/CDVRemoteInjectionUIWebViewDelegate.m" />
     <header-file src="src/ios/CDVRemoteInjectionWebViewBaseDelegate.h" />
     <source-file src="src/ios/CDVRemoteInjectionWebViewBaseDelegate.m" />
+    <header-file src="src/ios/CDVRemoteInjectionUIWebViewDelegate.h" />
+    <source-file src="src/ios/CDVRemoteInjectionUIWebViewDelegate.m" />
+    <header-file src="src/ios/CDVRemoteInjectionWKWebViewDelegate.h" />
+    <source-file src="src/ios/CDVRemoteInjectionWKWebViewDelegate.m" />
   </platform>
   <platform name="android">
     <config-file target="config.xml" parent="/*">
