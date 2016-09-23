@@ -11,7 +11,45 @@
 @property (readwrite, weak) CDVRemoteInjectionPlugin *plugin;
 @end
 
+@interface CDVRemoteInjectionWebViewBaseDelegate ()
+@end
+
+@implementation WrappedDelegateProxy
+- (BOOL)respondsToSelector:(SEL)aSelector
+{
+    if ([super respondsToSelector:aSelector] || [self.wrappedDelegate respondsToSelector:aSelector]) {
+        return YES;
+    }
+    return NO;
+}
+
+- (void)forwardInvocation:(NSInvocation *)anInvocation
+{
+    if ([self.wrappedDelegate respondsToSelector:[anInvocation selector]])
+        [anInvocation invokeWithTarget:self.wrappedDelegate];
+    else
+        [super forwardInvocation:anInvocation];
+}
+@end
+
 @implementation CDVRemoteInjectionWebViewBaseDelegate
+{
+    /*
+     Last time a request was made to load the web view.  Can be NULL.
+     */
+    NSDate *lastRequestTime;
+    
+    /*
+     Reference to the currently displayed alert view.  Can be NULL.
+     */
+    UIAlertView *alertView;
+    
+    /*
+     True if the user forced a reload.
+     */
+    BOOL userRequestedReload;
+}
+
 - (id) initWithPlugin:(CDVRemoteInjectionPlugin *) injectionPlugin
 {
     if ( self = [super init] ) {
@@ -91,22 +129,134 @@
     return NO;
 }
 
-@end
-
-@implementation WrappedDelegateProxy
-- (BOOL)respondsToSelector:(SEL)aSelector
+/*
+ * Begins a timer to track the progress of a request.
+ */
+-(void) startRequestTimer
 {
-    if ([super respondsToSelector:aSelector] || [self.wrappedDelegate respondsToSelector:aSelector]) {
-        return YES;
+    if (self.plugin.promptInterval > 0) {
+        [self cancelRequestTimer];
+        lastRequestTime = [NSDate date];
+        
+        // Schedule progress check.
+        NSLog(@"Starting a timer to track page load time that will expire in '%ld' seconds.", (long)self.plugin.promptInterval);
+        [self performSelector:@selector(loadProgressCheck:) withObject:lastRequestTime afterDelay:self.plugin.promptInterval];
     }
-    return NO;
 }
 
-- (void)forwardInvocation:(NSInvocation *)anInvocation
+/*
+ * Determines if the user should be prompted because of a long running request.  Displays the prompt.
+ */
+-(void) loadProgressCheck:(id)requestTime
 {
-    if ([self.wrappedDelegate respondsToSelector:[anInvocation selector]])
-        [anInvocation invokeWithTarget:self.wrappedDelegate];
-    else
-        [super forwardInvocation:anInvocation];
+    if (lastRequestTime != NULL && [(NSDate *)requestTime isEqualToDate:lastRequestTime]) {
+        if ([self isLoading]) {
+            NSLog(@"Request taking too long, displaying dialog.");
+            [self displayRetryPromptWithMessage:@"The server is taking longer than expected to respond." withCancelText:@"Wait"];
+        }
+    }
 }
+
+
+/*
+ * Has to be implemented by the subclass to allow the user to retry a long running request.
+ */
+-(void) retryCurrentRequest
+{
+    NSException* myException = [NSException
+                                exceptionWithName:@"MethodNotImplemented"
+                                reason:@"Subclass must implement 'retryCurrentRequest'."
+                                userInfo:nil];
+    @throw myException;
+}
+
+/*
+ Prompts the user providing them a choice to retry the latest request or wait.
+ */
+-(void) displayRetryPromptWithMessage:(NSString*)message withCancelText:(NSString *)cancelText
+{
+    alertView = [[UIAlertView alloc] initWithTitle:@"Connection Error"
+                                           message:message
+                                          delegate:self
+                                 cancelButtonTitle:cancelText
+                                 otherButtonTitles:nil];
+    [alertView addButtonWithTitle:@"Retry"];
+    [alertView show];
+}
+
+/*
+ * Invoked as callback from UIAlertView when prompting the user about connection issues.
+ */
+- (void) alertView:(UIAlertView *)view didDismissWithButtonIndex:(NSInteger)buttonIndex
+{
+    alertView = NULL;
+
+    if(buttonIndex == 1) {
+        userRequestedReload = YES; // Allows us to keep track of the fact that an error may be raised
+        // by the webView as a result of attempting to load a page before the previous request finished.
+
+        NSLog(@"User initiated retry of current request");
+        [self retryCurrentRequest];
+    }
+
+    if (buttonIndex == 0 || buttonIndex == 1) {
+        // In either the case that the user says to wait or retry we always want to reset the timer so that they're
+        // prompted if the request has not completed.  This provides the user a way to get out of a blank screen
+        // on start up.
+        [self startRequestTimer];
+    }
+}
+
+#pragma mark - Subclass callbacks
+
+/*
+ * Callback to inform the base base of the start of a page load.
+ */
+-(void) webViewRequestStart
+{
+    userRequestedReload = NO;
+    [self startRequestTimer];
+}
+
+/*
+ * Callback to inform the base of a page load failure.
+ */
+- (void)loadPageFailure
+{
+    if (userRequestedReload == NO) {
+        [self displayRetryPromptWithMessage:@"Unable to contact the site." withCancelText:@"Close"];
+    }
+}
+
+#pragma mark - Must be implemented by subclass
+
+/*
+ * Resets the request timer state.  Hides the alert view if it is displayed.
+ */
+-(void) cancelRequestTimer
+{
+    if (alertView != NULL && alertView.visible == YES) {
+        // Dismiss the alert view.  The assumption is the page finished loading while the view was displayed.
+        [alertView dismissWithClickedButtonIndex:-1 animated:YES];
+        alertView = NULL;
+    }
+    
+    if (lastRequestTime != NULL) {
+        [NSObject cancelPreviousPerformRequestsWithTarget:(id)self selector:@selector(loadProgressCheck:) object:lastRequestTime];
+    }
+    lastRequestTime = NULL;
+}
+
+/*
+ * Has to be implemented by subclass to state when a request has been made without yet seeing a response.
+ */
+-(BOOL) isLoading
+{
+    NSException* myException = [NSException
+                                exceptionWithName:@"MethodNotImplemented"
+                                reason:@"Subclass must implement 'isLoading'."
+                                userInfo:nil];
+    @throw myException;
+}
+
 @end

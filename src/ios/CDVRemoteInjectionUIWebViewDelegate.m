@@ -46,6 +46,7 @@
 {
     CDVRemoteInjectionUIWebViewNotificationDelegate *notificationDelegate;
 }
+
 - (id) initWithPlugin:(CDVRemoteInjectionPlugin *) injectionPlugin
 {
     return [super initWithPlugin:injectionPlugin];
@@ -55,12 +56,23 @@
 {
     self.plugin = plugin;
     
+    [[NSNotificationCenter defaultCenter] addObserver:self
+                                             selector:@selector(webViewDidStartLoad:)
+                                                 name:kCDVRemoteInjectionUIWebViewDidStartLoad
+                                               object:nil];
+    
     // Hook to inject cordova into the page.
     [[NSNotificationCenter defaultCenter] addObserver:self
                                              selector:@selector(webViewDidFinishLoad:)
                                                  name:kCDVRemoteInjectionUIWebViewDidFinishLoad
                                                object:nil];
     
+    // Hook to respond to page load failures.
+    [[NSNotificationCenter defaultCenter] addObserver:self
+                                             selector:@selector(didWebViewFailLoadWithError:)
+                                                 name:kCDVRemoteInjectionUIWebViewDidFailLoadWithError
+                                               object:nil];
+
     // Wrap the current delegate with our own so we can hook into web view events.
     UIWebView *uiWebView = [plugin findWebView];
     notificationDelegate = [[CDVRemoteInjectionUIWebViewNotificationDelegate alloc] init];
@@ -68,19 +80,46 @@
     [uiWebView setDelegate:notificationDelegate];
 }
 
+-(void) webViewDidStartLoad:(NSNotification*)notification
+{
+    [super webViewRequestStart];
+}
+
 /*
  After page load inject cordova and its plugins.
  */
- - (void) webViewDidFinishLoad:(NSNotification*)notification
- {
-     // TODO
-     //[self cancelRequestTimer];
+- (void) webViewDidFinishLoad:(NSNotification*)notification
+{
+    // Cancel the slow request timer.
+    [self cancelRequestTimer];
  
-     UIWebView *webView = notification.object;
-     NSString *scheme = webView.request.URL.scheme;
+    // Inject cordova into the page.
+    UIWebView *webView = notification.object;
+    NSString *scheme = webView.request.URL.scheme;
  
-     if ([self isSupportedURLScheme:scheme]){
-         [webView stringByEvaluatingJavaScriptFromString:[self buildInjectionJS]];
-     }
- }
+    if ([self isSupportedURLScheme:scheme]){
+        [webView stringByEvaluatingJavaScriptFromString:[self buildInjectionJS]];
+    }
+}
+
+// Handles notifications from the webview delegate whenever a page load fails.
+- (void)didWebViewFailLoadWithError:(NSNotification*)notification
+{
+    [self loadPageFailure];
+}
+
+- (BOOL) isLoading
+{
+    UIWebView *uiWebView = [self.plugin findWebView];
+    return uiWebView.loading;
+}
+
+- (void) retryCurrentRequest
+{
+    UIWebView *webView = [self.plugin findWebView];
+    
+    [webView stopLoading];
+    [webView reload];
+}
+
 @end
