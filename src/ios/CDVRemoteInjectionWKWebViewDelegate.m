@@ -14,7 +14,7 @@
 
 - (void)webView:(WKWebView *)webView didFinishNavigation:(WKNavigation *)navigation
 {
-    [[NSNotificationCenter defaultCenter] postNotification:[NSNotification notificationWithName:kDidFinishLoad object:webView]];
+    [self.webViewDelegate onWebViewDidFinishLoad:webView];
     
     if ([self.wrappedDelegate respondsToSelector:@selector(webView:didFinishNavigation:)]) {
         [self.wrappedDelegate webView:webView didFinishNavigation:navigation];
@@ -23,22 +23,28 @@
 
 - (void)webView:(WKWebView *)webView didStartProvisionalNavigation:(WKNavigation *)navigation
 {
-    [[NSNotificationCenter defaultCenter] postNotification:[NSNotification notificationWithName:kDidStartProvisionNavigation object:webView]];
+    [self.webViewDelegate onWebViewDidStartProvisionalNavigation];
     
     if ([self.wrappedDelegate respondsToSelector:@selector(webView:didStartProvisionalNavigation:)]) {
         [self.wrappedDelegate webView:webView didStartProvisionalNavigation:navigation];
     }
 }
 
-/*
- * Invoked when a page cannot be found.
- */
 - (void)webView:(WKWebView *)webView didFailProvisionalNavigation:(WKNavigation *)navigation withError:(NSError *)error;
 {
-    [[NSNotificationCenter defaultCenter] postNotification:[NSNotification notificationWithName:KDidFailProvisionalNavigation object:webView]];
+    [self.webViewDelegate onWebViewDidFailNavigation:error];
     
     if ([self.wrappedDelegate respondsToSelector:@selector(webView:didFailProvisionalNavigation:withError:)]) {
         [self.wrappedDelegate webView:webView didFailProvisionalNavigation:navigation withError:error];
+    }
+}
+
+- (void)webView:(WKWebView *)webView didFailNavigation:(WKNavigation *)navigation withError:(NSError *)error;
+{
+    [self.webViewDelegate onWebViewDidFailNavigation:error];
+    
+    if ([self.wrappedDelegate respondsToSelector:@selector(webView:didFailNavigation:withError:)]) {
+        [self.wrappedDelegate webView:webView didFailNavigation:navigation withError:error];
     }
 }
 
@@ -53,37 +59,22 @@
 {
     self.plugin = plugin;
     
-    // Hook to inject cordova into the page.
-    [[NSNotificationCenter defaultCenter] addObserver:self
-                                             selector:@selector(onWebViewDidFinishLoad:)
-                                                 name:kDidFinishLoad
-                                               object:nil];
-    
-    [[NSNotificationCenter defaultCenter] addObserver:self
-                                             selector:@selector(onWebViewDidStartProvisionalNavigation:)
-                                                 name:kDidStartProvisionNavigation
-                                               object:nil];
-    
-    [[NSNotificationCenter defaultCenter] addObserver:self
-                                             selector:@selector(onWebViewDidFailProvisionalNavigation:)
-                                                 name:KDidFailProvisionalNavigation
-                                               object:nil];
-    
     //Wrap the current delegate with our own so we can hook into web view events.
     WKWebView *webView = [plugin findWebView];
     ourDelegate = [[CDVRemoteInjectionWKWebViewNavigationDelegate alloc] init];
     ourDelegate.wrappedDelegate = [webView navigationDelegate];
+    ourDelegate.webViewDelegate = self;
+    
     [webView setNavigationDelegate:ourDelegate];
 }
 
 /*
  After page load inject cordova and its plugins.
  */
-- (void) onWebViewDidFinishLoad:(NSNotification*)notification
+- (void) onWebViewDidFinishLoad:(WKWebView *)webView;
 {
     [self cancelRequestTimer];
     
-    WKWebView *webView = notification.object;
     NSString *scheme = webView.URL.scheme;
 
     if ([self isSupportedURLScheme:scheme]) {
@@ -96,17 +87,14 @@
     }
 }
 
-/*
- * Page load request has been made.
- */
-- (void) onWebViewDidStartProvisionalNavigation:(NSNotification *)notification
+- (void) onWebViewDidStartProvisionalNavigation
 {
     [self webViewRequestStart];
 }
 
-- (void) onWebViewDidFailProvisionalNavigation: (NSNotification *)notification
+- (void) onWebViewDidFailNavigation:(NSError *)error
 {
-    [self loadPageFailure];
+    [self loadPageFailure:error];
 }
 
 /*

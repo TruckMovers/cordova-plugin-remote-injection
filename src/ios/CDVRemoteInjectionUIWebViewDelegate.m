@@ -7,25 +7,22 @@
 #import "CDVRemoteInjectionUIWebViewDelegate.h"
 #import "CDVRemoteInjectionWebViewBaseDelegate.h"
 
-#define kCDVRemoteInjectionUIWebViewDidStartLoad @"CDVRemoteInjectionUIWebViewDidStartLoad"
-#define kCDVRemoteInjectionUIWebViewDidFinishLoad @"CDVRemoteInjectionUIWebViewDidFinishLoad"
-#define kCDVRemoteInjectionUIWebViewDidFailLoadWithError @"CDVRemoteInjectionUIWebViewDidFailLoadWithError"
 
 @implementation CDVRemoteInjectionUIWebViewNotificationDelegate
 @dynamic wrappedDelegate;
 
 - (void)webViewDidStartLoad:(UIWebView*)webView
 {
-    [[NSNotificationCenter defaultCenter] postNotification:[NSNotification notificationWithName:kCDVRemoteInjectionUIWebViewDidStartLoad object:webView]];
-
+    [self.webViewDelegate onWebViewDidStartLoad];
+    
     if ([self.wrappedDelegate respondsToSelector:@selector(webViewDidStartLoad:)]) {
-        [self.wrappedDelegate webViewDidStartLoad: webView];
+        [self.wrappedDelegate webViewDidStartLoad:webView];
     }
 }
 
 - (void)webViewDidFinishLoad:(UIWebView *)webView
 {
-    [[NSNotificationCenter defaultCenter] postNotification:[NSNotification notificationWithName:kCDVRemoteInjectionUIWebViewDidFinishLoad object:webView]];
+    [self.webViewDelegate onWebViewDidFinishLoad:webView];
     
     if ([self.wrappedDelegate respondsToSelector:@selector(webViewDidFinishLoad:)]) {
         [self.wrappedDelegate webViewDidFinishLoad:webView];
@@ -38,7 +35,7 @@
         [self.wrappedDelegate webView:webView didFailLoadWithError:error];
     }
     
-    [[NSNotificationCenter defaultCenter] postNotification:[NSNotification notificationWithName:kCDVRemoteInjectionUIWebViewDidFailLoadWithError object:error]];
+    [self.webViewDelegate onWebViewFailLoadWithError:error];
 }
 @end
 
@@ -50,32 +47,16 @@
 - (void)initializeDelegate:(CDVRemoteInjectionPlugin *)plugin
 {
     self.plugin = plugin;
-    
-    [[NSNotificationCenter defaultCenter] addObserver:self
-                                             selector:@selector(webViewDidStartLoad:)
-                                                 name:kCDVRemoteInjectionUIWebViewDidStartLoad
-                                               object:nil];
-    
-    // Hook to inject cordova into the page.
-    [[NSNotificationCenter defaultCenter] addObserver:self
-                                             selector:@selector(webViewDidFinishLoad:)
-                                                 name:kCDVRemoteInjectionUIWebViewDidFinishLoad
-                                               object:nil];
-    
-    // Hook to respond to page load failures.
-    [[NSNotificationCenter defaultCenter] addObserver:self
-                                             selector:@selector(didWebViewFailLoadWithError:)
-                                                 name:kCDVRemoteInjectionUIWebViewDidFailLoadWithError
-                                               object:nil];
 
     // Wrap the current delegate with our own so we can hook into web view events.
     UIWebView *uiWebView = [plugin findWebView];
     notificationDelegate = [[CDVRemoteInjectionUIWebViewNotificationDelegate alloc] init];
     notificationDelegate.wrappedDelegate = [uiWebView delegate];
+    notificationDelegate.webViewDelegate = self;
     [uiWebView setDelegate:notificationDelegate];
 }
 
--(void) webViewDidStartLoad:(NSNotification*)notification
+-(void) onWebViewDidStartLoad
 {
     [super webViewRequestStart];
 }
@@ -83,13 +64,12 @@
 /*
  * After page load inject cordova and its plugins.
  */
-- (void) webViewDidFinishLoad:(NSNotification*)notification
+- (void) onWebViewDidFinishLoad:(UIWebView *)webView
 {
     // Cancel the slow request timer.
     [self cancelRequestTimer];
  
     // Inject cordova into the page.
-    UIWebView *webView = notification.object;
     NSString *scheme = webView.request.URL.scheme;
  
     if ([self isSupportedURLScheme:scheme]){
@@ -98,9 +78,9 @@
 }
 
 // Handles notifications from the webview delegate whenever a page load fails.
-- (void)didWebViewFailLoadWithError:(NSNotification*)notification
+- (void) onWebViewFailLoadWithError:(NSError *)error
 {
-    [self loadPageFailure];
+    [self loadPageFailure:error];
 }
 
 - (BOOL) isLoading

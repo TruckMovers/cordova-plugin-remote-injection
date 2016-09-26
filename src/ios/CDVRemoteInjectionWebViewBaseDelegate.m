@@ -211,8 +211,10 @@
 /*
  * Callback to inform the base of a page load failure.
  */
-- (void)loadPageFailure
+- (void)loadPageFailure:(NSError *)error
 {
+    NSLog(@"Error loading page: %@", [error description]);
+    
     if (userRequestedReload == NO) {
         [self displayRetryPromptWithMessage:@"Unable to contact the site." withCancelText:@"Close" retryable:NO];
     }

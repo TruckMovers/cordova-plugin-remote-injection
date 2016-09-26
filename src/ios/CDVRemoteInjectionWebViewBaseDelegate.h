@@ -14,7 +14,7 @@
 - (void) cancelRequestTimer;
 - (void) retryCurrentRequest;
 - (void) webViewRequestStart;
-- (void) loadPageFailure;
+- (void) loadPageFailure:(NSError *) error;
 @end
 
 /*
