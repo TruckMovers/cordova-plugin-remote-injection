@@ -16,5 +16,5 @@ doesn't seem correct.  To disable the dialog completely set to 0.
 @end
 
 @protocol CDVRemoteInjectionWebViewDelegate <NSObject>
-- (void)initializeDelegate:(CDVRemoteInjectionPlugin*)plugin;
+- (void) initializeDelegate:(CDVRemoteInjectionPlugin *)plugin;
 @end

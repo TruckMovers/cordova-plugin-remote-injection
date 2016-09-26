@@ -47,12 +47,7 @@
     CDVRemoteInjectionUIWebViewNotificationDelegate *notificationDelegate;
 }
 
-- (id) initWithPlugin:(CDVRemoteInjectionPlugin *) injectionPlugin
-{
-    return [super initWithPlugin:injectionPlugin];
-}
-
-- (void)initializeDelegate:(CDVRemoteInjectionPlugin*)plugin
+- (void)initializeDelegate:(CDVRemoteInjectionPlugin *)plugin
 {
     self.plugin = plugin;
     
@@ -86,7 +81,7 @@
 }
 
 /*
- After page load inject cordova and its plugins.
+ * After page load inject cordova and its plugins.
  */
 - (void) webViewDidFinishLoad:(NSNotification*)notification
 {

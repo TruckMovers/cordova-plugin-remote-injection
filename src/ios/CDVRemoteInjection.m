@@ -101,7 +101,7 @@
 /*
  * Reads preferences from the configuration.
  */
-- (id)settingForKey:(NSString*)key
+- (id)settingForKey:(NSString *)key
 {
     return [self.commandDelegate.settings objectForKey:[key lowercaseString]];
 }

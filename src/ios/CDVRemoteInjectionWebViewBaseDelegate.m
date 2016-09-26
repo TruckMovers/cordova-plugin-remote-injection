@@ -50,14 +50,9 @@
     BOOL userRequestedReload;
 }
 
-- (id) initWithPlugin:(CDVRemoteInjectionPlugin *) injectionPlugin
+- (void)initializeDelegate:(CDVRemoteInjectionPlugin *)plugin
 {
-    if ( self = [super init] ) {
-        self.plugin = injectionPlugin;
-        return self;
-    } else {
-        return nil;
-    }
+  // TODO To placate the compiler.
 }
 
 /*
@@ -117,7 +112,9 @@
 }
 
 /*
- Returns YES if the URL scheme is supported for JS injection.
+ * Returns YES if the URL scheme is supported for JS injection.
+ *
+ * TODO: possibly expand to check content type
  */
 - (BOOL) isSupportedURLScheme:(NSString *) scheme
 {
@@ -140,47 +137,40 @@
         
         // Schedule progress check.
         NSLog(@"Starting a timer to track page load time that will expire in '%ld' seconds.", (long)self.plugin.promptInterval);
-        [self performSelector:@selector(loadProgressCheck:) withObject:lastRequestTime afterDelay:self.plugin.promptInterval];
+        [self performSelector:@selector(loadProgressCheckCallback:) withObject:lastRequestTime afterDelay:self.plugin.promptInterval];
     }
 }
 
 /*
  * Determines if the user should be prompted because of a long running request.  Displays the prompt.
  */
--(void) loadProgressCheck:(id)requestTime
+-(void) loadProgressCheckCallback:(id)requestTime
 {
+    // Check equality of the request time to ensure we're still tracking the same request.  If not ignore.
     if (lastRequestTime != NULL && [(NSDate *)requestTime isEqualToDate:lastRequestTime]) {
         if ([self isLoading]) {
             NSLog(@"Request taking too long, displaying dialog.");
-            [self displayRetryPromptWithMessage:@"The server is taking longer than expected to respond." withCancelText:@"Wait"];
+            [self displayRetryPromptWithMessage:@"The server is taking longer than expected to respond." withCancelText:@"Wait" retryable:YES];
+            return;
+        } else {
+            NSLog(@"No request in progress.  Not displaying dialog.");
         }
     }
-}
-
-
-/*
- * Has to be implemented by the subclass to allow the user to retry a long running request.
- */
--(void) retryCurrentRequest
-{
-    NSException* myException = [NSException
-                                exceptionWithName:@"MethodNotImplemented"
-                                reason:@"Subclass must implement 'retryCurrentRequest'."
-                                userInfo:nil];
-    @throw myException;
 }
 
 /*
  Prompts the user providing them a choice to retry the latest request or wait.
  */
--(void) displayRetryPromptWithMessage:(NSString*)message withCancelText:(NSString *)cancelText
+-(void) displayRetryPromptWithMessage:(NSString*)message withCancelText:(NSString *)cancelText retryable:(BOOL) retry
 {
     alertView = [[UIAlertView alloc] initWithTitle:@"Connection Error"
                                            message:message
                                           delegate:self
                                  cancelButtonTitle:cancelText
                                  otherButtonTitles:nil];
-    [alertView addButtonWithTitle:@"Retry"];
+    if (retry) {
+        [alertView addButtonWithTitle:@"Retry"];
+    }
     [alertView show];
 }
 
@@ -224,11 +214,9 @@
 - (void)loadPageFailure
 {
     if (userRequestedReload == NO) {
-        [self displayRetryPromptWithMessage:@"Unable to contact the site." withCancelText:@"Close"];
+        [self displayRetryPromptWithMessage:@"Unable to contact the site." withCancelText:@"Close" retryable:NO];
     }
 }
-
-#pragma mark - Must be implemented by subclass
 
 /*
  * Resets the request timer state.  Hides the alert view if it is displayed.
@@ -242,10 +230,12 @@
     }
     
     if (lastRequestTime != NULL) {
-        [NSObject cancelPreviousPerformRequestsWithTarget:(id)self selector:@selector(loadProgressCheck:) object:lastRequestTime];
+        [NSObject cancelPreviousPerformRequestsWithTarget:(id)self selector:@selector(loadProgressCheckCallback:) object:lastRequestTime];
     }
     lastRequestTime = NULL;
 }
+
+#pragma mark - Must be implemented by subclass
 
 /*
  * Has to be implemented by subclass to state when a request has been made without yet seeing a response.
@@ -255,6 +245,18 @@
     NSException* myException = [NSException
                                 exceptionWithName:@"MethodNotImplemented"
                                 reason:@"Subclass must implement 'isLoading'."
+                                userInfo:nil];
+    @throw myException;
+}
+
+/*
+ * Has to be implemented by the subclass to allow the user to retry a long running request.
+ */
+-(void) retryCurrentRequest
+{
+    NSException* myException = [NSException
+                                exceptionWithName:@"MethodNotImplemented"
+                                reason:@"Subclass must implement 'retryCurrentRequest'."
                                 userInfo:nil];
     @throw myException;
 }
