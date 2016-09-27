@@ -7,6 +7,7 @@
   <keywords>cordova,remote,injection</keywords>
   <author>Brad Reynolds</author>
   <platform name="ios">
+    <framework src="WebKit.framework" weak="true" />
     <config-file target="config.xml" parent="/*">
       <feature name="RemoteInjection">
           <param name="ios-package" value="CDVRemoteInjectionPlugin" />
