@@ -1,12 +1,13 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <plugin xmlns="http://apache.org/cordova/ns/plugins/1.0"
-  id="cordova-plugin-remote-injection" version="0.3.0">
+  id="cordova-plugin-remote-injection" version="0.4.0">
   <name>Remote Injection</name>
   <description>Injects Cordova into a remote site.</description>
   <license>Apache 2.0</license>
   <keywords>cordova,remote,injection</keywords>
   <author>Brad Reynolds</author>
   <platform name="ios">
+    <framework src="WebKit.framework" weak="true" />
     <config-file target="config.xml" parent="/*">
       <feature name="RemoteInjection">
           <param name="ios-package" value="CDVRemoteInjectionPlugin" />
@@ -15,6 +16,12 @@
     </config-file>
     <header-file src="src/ios/CDVRemoteInjection.h" />
     <source-file src="src/ios/CDVRemoteInjection.m" />
+    <header-file src="src/ios/CDVRemoteInjectionWebViewBaseDelegate.h" />
+    <source-file src="src/ios/CDVRemoteInjectionWebViewBaseDelegate.m" />
+    <header-file src="src/ios/CDVRemoteInjectionUIWebViewDelegate.h" />
+    <source-file src="src/ios/CDVRemoteInjectionUIWebViewDelegate.m" />
+    <header-file src="src/ios/CDVRemoteInjectionWKWebViewDelegate.h" />
+    <source-file src="src/ios/CDVRemoteInjectionWKWebViewDelegate.m" />
   </platform>
   <platform name="android">
     <config-file target="config.xml" parent="/*">

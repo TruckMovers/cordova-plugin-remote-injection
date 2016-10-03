@@ -4,19 +4,17 @@
 
 #import <Cordova/CDVPlugin.h>
 
-#define kCDVRemoteInjectionWebViewDidStartLoad @"CDVRemoveInjectionWebViewDidStartLoad"
-#define kCDVRemoteInjectionWebViewDidFinishLoad @"CDVRemoveInjectionWebViewDidFinishLoad"
-#define kCDVRemoteInjectionWebViewDidFailLoadWithError @"CDVRemoteInjectionWebViewDidFailLoadWithError"
-
-@interface CDVRemoteInjectionWebViewNotificationDelegate : NSObject <UIWebViewDelegate>
-    @property (nonatomic,retain) id<UIWebViewDelegate> wrappedDelegate;
+@interface CDVRemoteInjectionPlugin : CDVPlugin
+@property (readonly) NSArray *injectFirstFiles;
+/*
+From CRIPageLoadPromptInterval preference.  Wait period in seconds before prompting the
+end user about a slow request.  Default is 10 which feels safe.  Off by default
+doesn't seem correct.  To disable the dialog completely set to 0.
+*/
+@property (readonly) NSInteger promptInterval;
+- (id) findWebView;
 @end
 
-@interface CDVRemoteInjectionPlugin : CDVPlugin
-{
-    CDVRemoteInjectionWebViewNotificationDelegate *notificationDelegate;
-}
-
-@property NSArray *preInjectionJSFiles;
-
+@protocol CDVRemoteInjectionWebViewDelegate <NSObject>
+- (void) initializeDelegate:(CDVRemoteInjectionPlugin *)plugin;
 @end
