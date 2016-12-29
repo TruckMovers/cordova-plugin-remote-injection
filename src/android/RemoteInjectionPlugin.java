@@ -138,7 +138,7 @@ public class RemoteInjectionPlugin extends CordovaPlugin {
             jsToInject.append(readFile(cordova.getActivity().getResources().getAssets(), path));
         }
         String jsUrl = "javascript:var script = document.createElement('script');";
-        jsUrl += "script.src=\"data:text/javascript;base64,";
+        jsUrl += "script.src=\"data:text/javascript;charset=utf-8;base64,";
 
         jsUrl += Base64.encodeToString(jsToInject.toString().getBytes(), Base64.DEFAULT);
         jsUrl += "\";";
