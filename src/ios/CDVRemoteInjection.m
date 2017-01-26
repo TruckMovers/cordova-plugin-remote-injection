@@ -71,6 +71,14 @@
         // If wanting to turn off set the value to 0 in the pref.
         _promptInterval = 10;
     }
+    
+    value = [self settingForKey:@"CRIShowConnectionErrorDialog"];
+    if ([value isEqual: @"0"]) {
+        _showConnectionErrorDialog = NO;
+    } else {
+        // By default the dialog is displayed.
+        _showConnectionErrorDialog = YES;
+    }
 
     id webView = [self findWebView];
     if ([webView isKindOfClass:[UIWebView class]]) {
