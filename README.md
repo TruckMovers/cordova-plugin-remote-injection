@@ -41,6 +41,21 @@ List of paths to JS files within the project to inject before injecting cordova 
 
 If the site hasn't loaded after this interval the user will be provided a choice to continue waiting or to retry loading the site.  This is turned on by default.  If not wanting the prompt the user set the value to 0.
 
+### CRIShowConnectionErrorDialog
+```xml
+<preference name="CRIShowConnectionErrorDialog" value="0" />
+```
+
+<em>iOS only</em>
+
+<dl>
+<dt>Type</dt>
+<dd>int</dd>
+<dt>Default</dt><dd>1</dd>
+</dl>
+
+By default the iOS app will display a dialog if there is a failure to connect to the site.  This creates issues if wanting to use Cordova's <code>ErrorUrl</code> config to handle connection errors.  "0" will turn off displaying of the dialog and allow the <code>ErrorUrl</code> config to kick in.
+
 ## FAQ
 
 #### 1. Will Apple approve the app if it just wraps a site?  Point 2.12 in their [guidelines](https://developer.apple.com/app-store/review/guidelines/#functionality) states:

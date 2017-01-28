@@ -215,7 +215,7 @@
 {
     NSLog(@"Error loading page: %@", [error description]);
     
-    if (userRequestedReload == NO) {
+    if (userRequestedReload == NO && self.plugin.showConnectionErrorDialog == YES) {
         [self displayRetryPromptWithMessage:@"Unable to contact the site." withCancelText:@"Close" retryable:NO];
     }
 }
