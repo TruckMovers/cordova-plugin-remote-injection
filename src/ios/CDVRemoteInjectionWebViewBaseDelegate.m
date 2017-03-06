@@ -215,6 +215,10 @@
 {
     NSLog(@"Error loading page: %@", [error description]);
     
+    if ([error code] == NSURLErrorCancelled) { //ignore if page load didn't complete and user moved away to another page
+        return;
+    }
+
     if (userRequestedReload == NO && self.plugin.showConnectionErrorDialog == YES) {
         [self displayRetryPromptWithMessage:@"Unable to contact the site." withCancelText:@"Close" retryable:NO];
     }
