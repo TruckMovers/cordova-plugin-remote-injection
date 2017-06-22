@@ -5,6 +5,7 @@ import android.app.AlertDialog;
 import android.content.DialogInterface;
 import android.content.res.AssetManager;
 import android.util.Base64;
+import android.webkit.ValueCallback;
 
 import org.apache.cordova.CordovaPlugin;
 import org.apache.cordova.CordovaWebViewEngine;
@@ -26,6 +27,7 @@ import java.util.regex.Pattern;
 
 public class RemoteInjectionPlugin extends CordovaPlugin {
     private static String TAG = "RemoteInjectionPlugin";
+    private static String SCRIPT_ID = "cordova-plugin-remote-injection-script";
     private static Pattern REMOTE_URL_REGEX = Pattern.compile("^http(s)?://.*");
 
 
@@ -113,39 +115,50 @@ public class RemoteInjectionPlugin extends CordovaPlugin {
     }
 
     private void injectCordova() {
-        List<String> jsPaths = new ArrayList<String>();
-        for (String path: preInjectionFileNames) {
-            jsPaths.add(path);
-        }
+        LOG.d(TAG, "Checking for cordova...");
+        webView.getEngine().evaluateJavascript("document.getElementById('" + SCRIPT_ID + "')", new ValueCallback<String>() {
+            @Override
+            public void onReceiveValue(String result) {
+                if (!"null".equals(result)) {
+                    LOG.w(TAG, "Cordova has already been injected");
+                    return; // do nothing, as script tag has already been added to the DOM
+                }
 
-        jsPaths.add("www/cordova.js");
+                List<String> jsPaths = new ArrayList<String>();
+                for (String path: preInjectionFileNames) {
+                    jsPaths.add(path);
+                }
 
-        // We load the plugin code manually rather than allow cordova to load them (via
-        // cordova_plugins.js).  The reason for this is the WebView will attempt to load the
-        // file in the origin of the page (e.g. https://truckmover.com/plugins/plugin/plugin.js).
-        // By loading them first cordova will skip its loading process altogether.
-        jsPaths.addAll(jsPathsToInject(cordova.getActivity().getResources().getAssets(), "www/plugins"));
+                jsPaths.add("www/cordova.js");
 
-        // Initialize the cordova plugin registry.
-        jsPaths.add("www/cordova_plugins.js");
+                // We load the plugin code manually rather than allow cordova to load them (via
+                // cordova_plugins.js).  The reason for this is the WebView will attempt to load the
+                // file in the origin of the page (e.g. https://truckmover.com/plugins/plugin/plugin.js).
+                // By loading them first cordova will skip its loading process altogether.
+                jsPaths.addAll(jsPathsToInject(cordova.getActivity().getResources().getAssets(), "www/plugins"));
 
-        // The way that I figured out to inject for android is to inject it as a script
-        // tag with the full JS encoded as a data URI
-        // (https://developer.mozilla.org/en-US/docs/Web/HTTP/data_URIs).  The script tag
-        // is appended to the DOM and executed via a javascript URL (e.g. javascript:doJsStuff()).
-        StringBuilder jsToInject = new StringBuilder();
-        for (String path: jsPaths) {
-            jsToInject.append(readFile(cordova.getActivity().getResources().getAssets(), path));
-        }
-        String jsUrl = "javascript:var script = document.createElement('script');";
-        jsUrl += "script.src=\"data:text/javascript;charset=utf-8;base64,";
+                // Initialize the cordova plugin registry.
+                jsPaths.add("www/cordova_plugins.js");
 
-        jsUrl += Base64.encodeToString(jsToInject.toString().getBytes(), Base64.NO_WRAP);
-        jsUrl += "\";";
+                // The way that I figured out to inject for android is to inject it as a script
+                // tag with the full JS encoded as a data URI
+                // (https://developer.mozilla.org/en-US/docs/Web/HTTP/data_URIs).  The script tag
+                // is appended to the DOM and executed via a javascript URL (e.g. javascript:doJsStuff()).
+                StringBuilder jsToInject = new StringBuilder();
+                for (String path: jsPaths) {
+                    jsToInject.append(readFile(cordova.getActivity().getResources().getAssets(), path));
+                }
 
-        jsUrl += "document.getElementsByTagName('head')[0].appendChild(script);";
+                String js = "var script = document.createElement('script'); script.id = '";
+                js += SCRIPT_ID;
+                js += "'; script.src = 'data:text/javascript;charset=utf-8;base64,";
+                js += Base64.encodeToString(jsToInject.toString().getBytes(), Base64.NO_WRAP);
+                js += "'; document.getElementsByTagName('head')[0].appendChild(script);";
 
-        webView.getEngine().loadUrl(jsUrl, false);
+                LOG.d(TAG, "Injecting cordova");
+                webView.getEngine().evaluateJavascript(js, null);
+            }
+        });
     }
 
     private String readFile(AssetManager assets, String filePath) {
