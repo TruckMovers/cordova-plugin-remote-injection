@@ -5,6 +5,7 @@ import android.app.AlertDialog;
 import android.content.DialogInterface;
 import android.content.res.AssetManager;
 import android.util.Base64;
+import android.os.Build;
 
 import org.apache.cordova.CordovaPlugin;
 import org.apache.cordova.CordovaWebViewEngine;
@@ -129,23 +130,29 @@ public class RemoteInjectionPlugin extends CordovaPlugin {
         // Initialize the cordova plugin registry.
         jsPaths.add("www/cordova_plugins.js");
 
-        // The way that I figured out to inject for android is to inject it as a script
-        // tag with the full JS encoded as a data URI
-        // (https://developer.mozilla.org/en-US/docs/Web/HTTP/data_URIs).  The script tag
-        // is appended to the DOM and executed via a javascript URL (e.g. javascript:doJsStuff()).
         StringBuilder jsToInject = new StringBuilder();
+
         for (String path: jsPaths) {
             jsToInject.append(readFile(cordova.getActivity().getResources().getAssets(), path));
         }
-        String jsUrl = "javascript:var script = document.createElement('script');";
-        jsUrl += "script.src=\"data:text/javascript;charset=utf-8;base64,";
 
-        jsUrl += Base64.encodeToString(jsToInject.toString().getBytes(), Base64.NO_WRAP);
-        jsUrl += "\";";
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
+            // On KITKAT or higher, use evaluateJavascript to load the JS
+            webView.getEngine().evaluateJavascript(jsToInject.toString(), null);
+        } else {
+            // On lower than KITKAT, inject the full concatenated JS with a
+            // script tag as a data URI. The script tag is appended to the DOM
+            // and executed via a javascript URL (e.g. javascript:doJsStuff()).
+            String jsUrl = "javascript:var script = document.createElement('script');";
+            jsUrl += "script.src=\"data:text/javascript;charset=utf-8;base64,";
 
-        jsUrl += "document.getElementsByTagName('head')[0].appendChild(script);";
+            jsUrl += Base64.encodeToString(jsToInject.toString().getBytes(), Base64.NO_WRAP);
+            jsUrl += "\";";
 
-        webView.getEngine().loadUrl(jsUrl, false);
+            jsUrl += "document.getElementsByTagName('head')[0].appendChild(script);";
+
+            webView.getEngine().loadUrl(jsUrl, false);
+        }
     }
 
     private String readFile(AssetManager assets, String filePath) {
