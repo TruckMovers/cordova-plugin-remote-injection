@@ -28,9 +28,9 @@ public class RemoteInjectionPlugin extends CordovaPlugin {
     private static String TAG = "RemoteInjectionPlugin";
     private static Pattern REMOTE_URL_REGEX = Pattern.compile("^http(s)?://.*");
 
-
     // List of files to inject before injecting Cordova.
     private final ArrayList<String> preInjectionFileNames = new ArrayList<String>();
+    private final ArrayList<String> injectableSites = new ArrayList<String>();
     private int promptInterval;  // Delay before prompting user to retry in seconds
 
     private RequestLifecycle lifecycle;
@@ -40,6 +40,12 @@ public class RemoteInjectionPlugin extends CordovaPlugin {
         for (String path: pref.split(",")) {
             preInjectionFileNames.add(path.trim());
         }
+
+        String sites = webView.getPreferences().getString("CRIInjectableSites","");
+        for (String site: pref.split(",")) {
+            injectableSites.add(site.trim());
+        }
+
         promptInterval = webView.getPreferences().getInteger("CRIPageLoadPromptInterval", 10);
 
         final Activity activity = super.cordova.getActivity();
@@ -49,6 +55,19 @@ public class RemoteInjectionPlugin extends CordovaPlugin {
 
     private void onMessageTypeFailure(String messageId, Object data) {
         LOG.e(TAG, messageId + " received a data instance that is not an expected type:" + data.getClass().getName());
+    }
+
+    private bool isInjectableSite(String site){
+        if(injectableSites.Size() <= 0){
+            return true;
+        }
+        for(String availableSite: injectableSites){
+            Pattern sitePattern = Pattern.compile("^"+availableSite);
+            if(sitePattern.matcher((String) site)){
+                return true;
+            }
+        }
+        return false;
     }
 
     @Override
@@ -82,7 +101,7 @@ public class RemoteInjectionPlugin extends CordovaPlugin {
         } else if (id.equals("onPageFinished")) {
             if (data instanceof String) {
                 String url = (String) data;
-                if (isRemote(url)) {
+                if (isRemote(url) && isInjectableSite(url)) {
                     injectCordova();
                     lifecycle.requestStopped();
                 }

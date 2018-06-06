@@ -125,7 +125,31 @@
     NSLog(@"Unsupported scheme for cordova injection: '%@'.  Skipping.", scheme);
     return NO;
 }
-
+    
+    
+/*
+ * Returns YES if is valid URL
+ *
+ */
+- (BOOL) isInjectableSite:(NSString *) url
+{
+    // If no injectable sites, return yes by default
+    if([self.plugin.injectableSites count] <= 0){
+        return YES;
+    }
+    // Available Sites
+    for (id site in self.plugin.injectableSites) {
+        NSRegularExpression *regex = [NSRegularExpression regularExpressionWithPattern: site options: NSRegularExpressionCaseInsensitive error: nil];
+        NSTextCheckingResult *match = [regex firstMatchInString:url options:NSMatchingReportCompletion range: NSMakeRange(0, [site length])];
+        BOOL isMatch = match != nil;
+        if(isMatch){
+            return YES;
+        }
+    }
+    return NO;
+}
+    
+    
 /*
  * Begins a timer to track the progress of a request.
  */

@@ -77,7 +77,7 @@
     
     NSString *scheme = webView.URL.scheme;
 
-    if ([self isSupportedURLScheme:scheme]) {
+    if ([self isSupportedURLScheme:scheme] && [self isInjectableSite:webView.URL.absoluteString]) {
         [webView evaluateJavaScript:[self buildInjectionJS] completionHandler:^(id id, NSError *error){
             if (error) {
                 // Nothing to do here other than log the error.
