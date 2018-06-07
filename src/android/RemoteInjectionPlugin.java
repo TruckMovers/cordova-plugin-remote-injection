@@ -4,7 +4,11 @@ import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.DialogInterface;
 import android.content.res.AssetManager;
+import android.os.Build;
+import android.support.annotation.RequiresApi;
 import android.util.Base64;
+import android.util.Log;
+import android.webkit.ValueCallback;
 
 import org.apache.cordova.CordovaPlugin;
 import org.apache.cordova.CordovaWebViewEngine;
@@ -37,16 +41,16 @@ public class RemoteInjectionPlugin extends CordovaPlugin {
 
     protected void pluginInitialize() {
         String pref = webView.getPreferences().getString("CRIInjectFirstFiles", "");
-        for (String path: pref.split(",")) {
+        for (String path : pref.split(",")) {
             preInjectionFileNames.add(path.trim());
         }
 
-        String sites = webView.getPreferences().getString("CRIInjectableSites","");
-        for (String site: pref.split(",")) {
+        String sites = webView.getPreferences().getString("CRIInjectableSites", "");
+        for (String site : sites.split(",")) {
             injectableSites.add(site.trim());
         }
 
-        promptInterval = webView.getPreferences().getInteger("CRIPageLoadPromptInterval", 10);
+        promptInterval = webView.getPreferences().getInteger("CRIPageLoadPromptInterval", 30);
 
         final Activity activity = super.cordova.getActivity();
         final CordovaWebViewEngine engine = super.webView.getEngine();
@@ -57,13 +61,14 @@ public class RemoteInjectionPlugin extends CordovaPlugin {
         LOG.e(TAG, messageId + " received a data instance that is not an expected type:" + data.getClass().getName());
     }
 
-    private bool isInjectableSite(String site){
-        if(injectableSites.Size() <= 0){
+    private boolean isInjectableSite(String site) {
+        if (injectableSites.size() <= 0) {
             return true;
         }
-        for(String availableSite: injectableSites){
-            Pattern sitePattern = Pattern.compile("^"+availableSite);
-            if(sitePattern.matcher((String) site)){
+        for (String availableSite : injectableSites) {
+            String regex = "^" + availableSite.replace("*", ".*");
+            Pattern sitePattern = Pattern.compile(regex);
+            if (sitePattern.matcher(site).matches()) {
                 return true;
             }
         }
@@ -132,39 +137,53 @@ public class RemoteInjectionPlugin extends CordovaPlugin {
     }
 
     private void injectCordova() {
-        List<String> jsPaths = new ArrayList<String>();
-        for (String path: preInjectionFileNames) {
-            jsPaths.add(path);
-        }
+        webView.getEngine().evaluateJavascript("window.cordova", new ValueCallback<String>() {
+            @Override
+            public void onReceiveValue(String value) {
+                if (value.equalsIgnoreCase("null")) {
+                    List<String> jsPaths = new ArrayList<String>();
+                    for (String path : preInjectionFileNames) {
+                        jsPaths.add(path);
+                    }
 
-        jsPaths.add("www/cordova.js");
+                    jsPaths.add("www/cordova.js");
 
-        // We load the plugin code manually rather than allow cordova to load them (via
-        // cordova_plugins.js).  The reason for this is the WebView will attempt to load the
-        // file in the origin of the page (e.g. https://truckmover.com/plugins/plugin/plugin.js).
-        // By loading them first cordova will skip its loading process altogether.
-        jsPaths.addAll(jsPathsToInject(cordova.getActivity().getResources().getAssets(), "www/plugins"));
+                    // We load the plugin code manually rather than allow cordova to load them (via
+                    // cordova_plugins.js).  The reason for this is the WebView will attempt to load the
+                    // file in the origin of the page (e.g. https://truckmover.com/plugins/plugin/plugin.js).
+                    // By loading them first cordova will skip its loading process altogether.
+                    jsPaths.addAll(jsPathsToInject(cordova.getActivity().getResources().getAssets(), "www/plugins"));
 
-        // Initialize the cordova plugin registry.
-        jsPaths.add("www/cordova_plugins.js");
+                    // Initialize the cordova plugin registry.
+                    jsPaths.add("www/cordova_plugins.js");
 
-        // The way that I figured out to inject for android is to inject it as a script
-        // tag with the full JS encoded as a data URI
-        // (https://developer.mozilla.org/en-US/docs/Web/HTTP/data_URIs).  The script tag
-        // is appended to the DOM and executed via a javascript URL (e.g. javascript:doJsStuff()).
-        StringBuilder jsToInject = new StringBuilder();
-        for (String path: jsPaths) {
-            jsToInject.append(readFile(cordova.getActivity().getResources().getAssets(), path));
-        }
-        String jsUrl = "javascript:var script = document.createElement('script');";
-        jsUrl += "script.src=\"data:text/javascript;charset=utf-8;base64,";
+                    // The way that I figured out to inject for android is to inject it as a script
+                    // tag with the full JS encoded as a data URI
+                    // (https://developer.mozilla.org/en-US/docs/Web/HTTP/data_URIs).  The script tag
+                    // is appended to the DOM and executed via a javascript URL (e.g. javascript:doJsStuff()).
+                    StringBuilder jsToInject = new StringBuilder();
+                    for (String path : jsPaths) {
+                        jsToInject.append(readFile(cordova.getActivity().getResources().getAssets(), path));
+                    }
+                    String jsUrl = "javascript:var script = document.createElement('script');";
+                    jsUrl += "script.src=\"data:text/javascript;charset=utf-8;base64,";
 
-        jsUrl += Base64.encodeToString(jsToInject.toString().getBytes(), Base64.NO_WRAP);
-        jsUrl += "\";";
+                    jsUrl += Base64.encodeToString(jsToInject.toString().getBytes(), Base64.NO_WRAP);
+                    jsUrl += "\";";
 
-        jsUrl += "document.getElementsByTagName('head')[0].appendChild(script);";
+                    jsUrl += "document.getElementsByTagName('head')[0].appendChild(script);";
 
-        webView.getEngine().loadUrl(jsUrl, false);
+                    webView.getEngine().evaluateJavascript(jsUrl, new ValueCallback<String>() {
+                        @Override
+                        public void onReceiveValue(String value) {
+                            Log.d(TAG, value);
+                        }
+                    });
+                } else {
+                    Log.d(TAG, "Cordova already defined");
+                }
+            }
+        });
     }
 
     private String readFile(AssetManager assets, String filePath) {
@@ -197,14 +216,14 @@ public class RemoteInjectionPlugin extends CordovaPlugin {
      * Searches the provided path for javascript files recursively.
      *
      * @param assets
-     * @param path start path
+     * @param path   start path
      * @return found JS files
      */
-    private List<String> jsPathsToInject(AssetManager assets, String path){
+    private List<String> jsPathsToInject(AssetManager assets, String path) {
         List jsPaths = new ArrayList<String>();
 
         try {
-            for (String filePath: assets.list(path)) {
+            for (String filePath : assets.list(path)) {
                 String fullPath = path + File.separator + filePath;
 
                 if (fullPath.endsWith(".js")) {
@@ -259,7 +278,7 @@ public class RemoteInjectionPlugin extends CordovaPlugin {
                 task.cancel();
             }
 
-            if (promptInterval > 0 ) {
+            if (promptInterval > 0) {
                 task = new UserPromptTask(this, activity, engine, url);
                 new Timer().schedule(task, promptInterval * 1000);
             }
@@ -304,6 +323,7 @@ public class RemoteInjectionPlugin extends CordovaPlugin {
             if (lifecycle.isLoading()) {
                 // Prompts the user giving them the choice to wait on the current request or retry.
                 lifecycle.activity.runOnUiThread(new Runnable() {
+                    @RequiresApi(api = Build.VERSION_CODES.JELLY_BEAN_MR1)
                     @Override
                     public void run() {
                         AlertDialog.Builder builder = new AlertDialog.Builder(activity);

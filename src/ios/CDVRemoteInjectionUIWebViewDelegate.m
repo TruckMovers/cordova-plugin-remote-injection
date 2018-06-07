@@ -74,7 +74,12 @@
  
     if ([self isSupportedURLScheme:scheme] && [self isInjectableSite:webView.request.URL.absoluteString]){
         NSLog(@"Evaluating Javascript for %@",webView.request.URL.absoluteString);
-        [webView stringByEvaluatingJavaScriptFromString:[self buildInjectionJS]];
+        NSString *response = [webView stringByEvaluatingJavaScriptFromString: @"window.cordova"];
+        if ([response caseInsensitiveCompare: @"null"] != NSOrderedSame){
+            [webView stringByEvaluatingJavaScriptFromString:[self buildInjectionJS]];
+        }else{
+            NSLog(@"Cordova already defined.");
+        }
     }
 }
 

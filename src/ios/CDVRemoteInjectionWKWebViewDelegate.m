@@ -78,11 +78,21 @@
     NSString *scheme = webView.URL.scheme;
 
     if ([self isSupportedURLScheme:scheme] && [self isInjectableSite:webView.URL.absoluteString]) {
-        [webView evaluateJavaScript:[self buildInjectionJS] completionHandler:^(id id, NSError *error){
-            if (error) {
-                // Nothing to do here other than log the error.
-                NSLog(@"Error when injecting javascript into WKWebView: '%@'.", error);
+        [webView evaluateJavaScript:@"window.cordova == null" completionHandler:^(id result, NSError *error){
+            if (result != nil) {
+                NSString *resultString = [NSString stringWithFormat:@"%@", result];
+                if([resultString caseInsensitiveCompare:@"0"] != NSOrderedSame){
+                    [webView evaluateJavaScript:[self buildInjectionJS] completionHandler:^(id result, NSError *error){
+                        if (error) {
+                            // Nothing to do here other than log the error.
+                            NSLog(@"Error when injecting javascript into WKWebView: '%@'.", error);
+                        }
+                    }];
+                }else{
+                    NSLog(@"Cordova has already been defined");
+                }
             }
+
         }];
     }
 }
