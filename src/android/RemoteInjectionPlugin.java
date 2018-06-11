@@ -50,7 +50,7 @@ public class RemoteInjectionPlugin extends CordovaPlugin {
             injectableSites.add(site.trim());
         }
 
-        promptInterval = webView.getPreferences().getInteger("CRIPageLoadPromptInterval", 30);
+        promptInterval = webView.getPreferences().getInteger("CRIPageLoadPromptInterval", 10);
 
         final Activity activity = super.cordova.getActivity();
         final CordovaWebViewEngine engine = super.webView.getEngine();
