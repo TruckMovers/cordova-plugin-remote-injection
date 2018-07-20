@@ -18,6 +18,8 @@ is set to 0.
  */
 @property (readonly) BOOL showConnectionErrorDialog;
     
+@property (readonly) NSArray *injectableSites;
+    
 - (id) findWebView;
 @end
 

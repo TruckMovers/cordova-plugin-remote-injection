@@ -11,6 +11,7 @@
 - (NSArray *) jsPathsToInject;
 - (NSString *) buildInjectionJS;
 - (BOOL) isSupportedURLScheme:(NSString *) scheme;
+- (BOOL) isInjectableSite:(NSString *) site;
 - (void) cancelRequestTimer;
 - (void) retryCurrentRequest;
 - (void) webViewRequestStart;

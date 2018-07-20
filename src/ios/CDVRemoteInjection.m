@@ -79,6 +79,17 @@
         // By default the dialog is displayed.
         _showConnectionErrorDialog = YES;
     }
+    
+    value = [self settingForKey:@"CRIInjectableSites"];
+    if (value != NULL){
+        NSMutableArray *sites = [[NSMutableArray alloc] init];
+        for (id site in [value componentsSeparatedByString:@","]) {
+            [sites addObject: [self trim: site]];
+        }
+        _injectableSites = sites;
+    } else {
+        _injectableSites = [[NSArray alloc] init];
+    }
 
     id webView = [self findWebView];
     if ([webView isKindOfClass:[UIWebView class]]) {

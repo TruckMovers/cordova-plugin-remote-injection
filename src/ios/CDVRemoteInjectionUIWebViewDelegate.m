@@ -72,8 +72,14 @@
     // Inject cordova into the page.
     NSString *scheme = webView.request.URL.scheme;
  
-    if ([self isSupportedURLScheme:scheme]){
-        [webView stringByEvaluatingJavaScriptFromString:[self buildInjectionJS]];
+    if ([self isSupportedURLScheme:scheme] && [self isInjectableSite:webView.request.URL.absoluteString]){
+        NSLog(@"Evaluating Javascript for %@",webView.request.URL.absoluteString);
+        NSString *response = [webView stringByEvaluatingJavaScriptFromString: @"window.cordova == null"];
+        if ([response caseInsensitiveCompare: @"false"] != NSOrderedSame){
+            [webView stringByEvaluatingJavaScriptFromString:[self buildInjectionJS]];
+        }else{
+            NSLog(@"Cordova already defined.");
+        }
     }
 }
 
