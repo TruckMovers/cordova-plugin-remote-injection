@@ -40,7 +40,7 @@ public class RemoteInjectionPlugin extends CordovaPlugin {
             preInjectionFileNames.add(path.trim());
         }
         // Delay before prompting user to retry in seconds
-        int promptInterval = webView.getPreferences().getInteger("CRIPageLoadPromptInterval", 1);
+        int promptInterval = webView.getPreferences().getInteger("CRIPageLoadPromptInterval", 10);
 
         final Activity activity = super.cordova.getActivity();
         final CordovaWebViewEngine engine = super.webView.getEngine();
