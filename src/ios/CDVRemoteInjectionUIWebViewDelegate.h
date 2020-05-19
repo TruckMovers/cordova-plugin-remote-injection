@@ -1,3 +1,5 @@
+#if !WK_WEB_VIEW_ONLY
+
 #import "CDVRemoteInjection.h"
 #import "CDVRemoteInjectionWebViewBaseDelegate.h"
 
@@ -11,3 +13,5 @@
 @interface CDVRemoteInjectionUIWebViewNotificationDelegate : WrappedDelegateProxy <UIWebViewDelegate>
 @property (readwrite, weak) CDVRemoteInjectionUIWebViewDelegate *webViewDelegate;
 @end
+
+#endif
