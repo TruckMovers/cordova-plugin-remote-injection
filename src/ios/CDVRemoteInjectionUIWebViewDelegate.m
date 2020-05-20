@@ -2,6 +2,8 @@
 //  CDVRemoteInjection.m
 //
 
+#if !WK_WEB_VIEW_ONLY
+
 #import <Foundation/Foundation.h>
 
 #import "CDVRemoteInjectionUIWebViewDelegate.h"
@@ -98,3 +100,5 @@
 }
 
 @end
+
+#endif

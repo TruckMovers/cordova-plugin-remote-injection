@@ -81,6 +81,10 @@
     }
 
     id webView = [self findWebView];
+    #if WK_WEB_VIEW_ONLY
+        webViewDelegate = [[CDVRemoteInjectionWKWebViewDelegate alloc] init];
+        [webViewDelegate initializeDelegate:self];
+    #else
     if ([webView isKindOfClass:[UIWebView class]]) {
         NSLog(@"Found UIWebView");
         webViewDelegate = [[CDVRemoteInjectionUIWebViewDelegate alloc] init];
@@ -96,6 +100,7 @@
     } else {
         NSLog(@"Not a supported web view implementation");
     }
+    #endif
 }
 
 /*
