@@ -220,7 +220,7 @@
     }
 
     if (userRequestedReload == NO && self.plugin.showConnectionErrorDialog == YES) {
-        [self displayRetryPromptWithMessage:@"Unable to contact the site." withCancelText:@"Close" retryable:NO];
+        [self displayRetryPromptWithMessage:@"Unable to contact the app." withCancelText:@"Close" retryable:NO];
     }
 }
 
